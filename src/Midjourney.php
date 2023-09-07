@@ -19,7 +19,7 @@ class Midjourney
 
     protected const SESSION_ID = '2fb980f65e5c9a77c96ca01f2c242cf6';
 
-    private static $client;
+    private static Client $client;
 
     private static $channel_id;
 
@@ -48,12 +48,24 @@ class Midjourney
                 'Authorization' => self::$oauth_token
             ]
         ]);
+    }
 
-        $request = self::$client->get('channels/' . self::$channel_id);
+    /**
+     * @throws GuzzleException
+     */
+    public function getGuildId(int $channelId)
+    {
+        $request = self::$client->get('channels/' . $channelId);
         $response = json_decode((string)$request->getBody());
 
         self::$guild_id = $response->guild_id;
+    }
 
+    /**
+     * @throws GuzzleException
+     */
+    public function getUserId()
+    {
         $request = self::$client->get('users/@me');
         $response = json_decode((string)$request->getBody());
 
@@ -74,7 +86,10 @@ class Midjourney
         return null;
     }
 
-    public function imagine(string $prompt)
+    /**
+     * @throws GuzzleException
+     */
+    public function imagine(string $prompt): void
     {
         $params = [
             'type' => 2,
@@ -116,26 +131,14 @@ class Midjourney
         self::$client->post('interactions', [
             'json' => $params
         ]);
-
-        sleep(8);
-
-        $imagine_message = null;
-
-        while (is_null($imagine_message)) {
-            $imagine_message = $this->getImagine($prompt);
-
-            if (is_null($imagine_message)) sleep(8);
-        }
-
-        return $imagine_message;
     }
 
-    public function getImagine(string $prompt)
+    /**
+     * @throws GuzzleException
+     */
+    public function getImagine(string $prompt): ?object
     {
-        $response = self::$client->get('channels/' . self::$channel_id . '/messages');
-        $response = json_decode((string)$response->getBody());
-
-        $raw_message = self::firstWhere($response, function ($item) use ($prompt) {
+        $raw_message = self::firstWhere($this->getMessages(self::$channel_id), function ($item) use ($prompt) {
             return (
                 str_starts_with($item->content, "**{$prompt}** - <@" . self::$user_id . '>') and
                 !str_contains($item->content, '%') and
@@ -152,7 +155,22 @@ class Midjourney
         ];
     }
 
-    public function upscale($message, int $upscale_index = 0)
+    /**
+     * get message list
+     *
+     * @throws GuzzleException
+     */
+    public function getMessages(int $channelId, int $limit = 50): array
+    {
+        $response = self::$client->get('channels/' . $channelId . '/messages?limit=' . $limit);
+        return json_decode((string)$response->getBody());
+    }
+
+    /**
+     * @throws GuzzleException
+     * @throws Exception
+     */
+    public function upscale($message, int $upscale_index = 0): void
     {
         if (!property_exists($message, 'raw_message')) {
             throw new Exception('Upscale requires a message object obtained from the imagine/getImagine methods.');
@@ -188,18 +206,12 @@ class Midjourney
         self::$client->post('interactions', [
             'json' => $params
         ]);
-
-        $upscaled_photo_url = null;
-
-        while (is_null($upscaled_photo_url)) {
-            $upscaled_photo_url = $this->getUpscale($message, $upscale_index);
-
-            if (is_null($upscaled_photo_url)) sleep(3);
-        }
-
-        return $upscaled_photo_url;
     }
 
+    /**
+     * @throws GuzzleException
+     * @throws Exception
+     */
     public function getUpscale($message, $upscale_index = 0)
     {
         if (!property_exists($message, 'raw_message')) {
@@ -212,8 +224,7 @@ class Midjourney
 
         $prompt = $message->prompt;
 
-        $response = self::$client->get('channels/' . self::$channel_id . '/messages');
-        $response = json_decode((string)$response->getBody());
+        $response = $this->getMessages(self::$channel_id);
 
         $message_index = $upscale_index + 1;
         $message = self::firstWhere($response, 'content', "**{$prompt}** - Image #{$message_index} <@" . self::$user_id . '>');
@@ -233,11 +244,32 @@ class Midjourney
         return null;
     }
 
-    public function generate($prompt, $upscale_index = 0)
+    /**
+     * @throws GuzzleException
+     */
+    public function generate($prompt, $upscale_index = 0): object
     {
-        $imagine = $this->imagine($prompt);
+        $this->getGuildId(self::$channel_id);
+        $this->getUserId();
+        $this->imagine($prompt);
 
-        $upscaled_photo_url = $this->upscale($imagine, $upscale_index);
+        $imagine = null;
+        //  todo Maybe endless loop
+        while (is_null($imagine)) {
+            sleep(10);
+            $imagine = $this->getImagine($prompt);
+            if (!is_null($imagine)) break;
+        }
+
+        $this->upscale($imagine, $upscale_index);
+
+        $upscaled_photo_url = null;
+        //  todo Maybe endless loop
+        while (is_null($upscaled_photo_url)) {
+            sleep(5);
+            $upscaled_photo_url = $this->getUpscale($imagine, $upscale_index);
+            if (!is_null($upscaled_photo_url)) break;
+        }
 
         return (object)[
             'imagine_message_id' => $imagine->id,
