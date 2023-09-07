@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Http;
 class Midjourney
 {
 
-    private const API_URL = 'https://discord.com/api/v9';
+    private const API_URL = 'https://discord.com';
 
     protected const APPLICATION_ID = '936929561302675456';
 
@@ -57,8 +57,12 @@ class Midjourney
     public function getGuildId(int $channelId)
     {
         return cache()->remember('dc_guild', 36000, function () use ($channelId) {
-            $id = self::$client->get('channels/' . $channelId)->json('guild_id');
-            if (empty($id)) throw new Exception('guild_id get failed');
+            $resp = self::$client->get('api/v9/channels/' . $channelId)->json();
+            if (empty($resp['guild_id'])) {
+                info('dc-guild', compact('resp'));
+                throw new Exception('guild_id get failed');
+            };
+            return $resp['guild_id'];
         });
     }
 
@@ -68,8 +72,12 @@ class Midjourney
     public function getUserId()
     {
         return cache()->remember('dc_user', 36000, function () {
-            $id = self::$client->get('users/@me')->json('id');
-            if (empty($id)) throw new Exception('user_id get failed');
+            $resp = self::$client->get('api/v9/users/@me')->json();
+            if (empty($resp['id'])) {
+                info('dc-user', compact('resp'));
+                throw new Exception('user_id get failed');
+            }
+            return $resp['id'];
         });
     }
 
@@ -134,7 +142,7 @@ class Midjourney
             ]
         ];
 
-        self::$client->post('interactions', $params);
+        self::$client->post('api/v9/interactions', $params);
     }
 
     /**
@@ -167,7 +175,7 @@ class Midjourney
      */
     public function getMessages(int $channelId, int $limit = 50): array
     {
-        return self::$client->get('channels/' . $channelId . '/messages?limit=' . $limit)->json();
+        return self::$client->get('api/v9/channels/' . $channelId . '/messages?limit=' . $limit)->json();
     }
 
     /**
@@ -192,7 +200,7 @@ class Midjourney
             'guild_id' => self::$guild_id,
             'channel_id' => self::$channel_id,
             'message_flags' => 0,
-            'message_id' => $message->id,
+            'message_id' => $message['id'],
             'application_id' => self::APPLICATION_ID,
             'session_id' => self::SESSION_ID,
             'data' => [
@@ -201,7 +209,7 @@ class Midjourney
             ]
         ];
 
-        self::$client->post('interactions', $params);
+        self::$client->post('api/v9/interactions', $params);
     }
 
     /**
