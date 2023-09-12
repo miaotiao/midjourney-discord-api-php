@@ -4,6 +4,7 @@ namespace Ferranfg\MidjourneyPhp;
 
 use Exception;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -57,7 +58,7 @@ class Midjourney
     public function getGuildId(int $channelId)
     {
         return cache()->remember('dc_guild', 36000, function () use ($channelId) {
-            $resp = self::$client->get('api/v9/channels/' . $channelId)->json();
+            $resp = self::$client->get('api/v9/channels/' . $channelId)->throw()->json();
             if (empty($resp['guild_id'])) {
                 info('dc-guild', compact('resp'));
                 throw new Exception('guild_id get failed');
@@ -72,7 +73,7 @@ class Midjourney
     public function getUserId()
     {
         return cache()->remember('dc_user', 36000, function () {
-            $resp = self::$client->get('api/v9/users/@me')->json();
+            $resp = self::$client->get('api/v9/users/@me')->throw()->json();
             if (empty($resp['id'])) {
                 info('dc-user', compact('resp'));
                 throw new Exception('user_id get failed');
@@ -102,6 +103,7 @@ class Midjourney
     }
 
     /**
+     * @throws RequestException
      */
     public function imagine(string $prompt): void
     {
@@ -142,7 +144,8 @@ class Midjourney
             ]
         ];
 
-        self::$client->post('api/v9/interactions', $params);
+
+        self::$client->post('api/v9/interactions', $params)->throw();
     }
 
     /**
@@ -172,10 +175,11 @@ class Midjourney
     /**
      * get message list
      *
+     * @throws RequestException
      */
     public function getMessages(int $channelId, int $limit = 50): array
     {
-        return self::$client->get('api/v9/channels/' . $channelId . '/messages?limit=' . $limit)->json();
+        return self::$client->get('api/v9/channels/' . $channelId . '/messages?limit=' . $limit)->throw()->json();
     }
 
     /**
@@ -209,7 +213,7 @@ class Midjourney
             ]
         ];
 
-        self::$client->post('api/v9/interactions', $params);
+        self::$client->post('api/v9/interactions', $params)->throw();
     }
 
     /**
