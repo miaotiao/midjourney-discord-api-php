@@ -270,7 +270,7 @@ class Midjourney
         return $attachments[0]['url'];
     }
 
-    public function getUpResFromMsgList(string $prompt, array $msgList, int $index = 0)
+    public function getUpResFromMsgList(string $prompt, array $msgList, int $index = 0): ?string
     {
         $message_index = $index + 1;
 
