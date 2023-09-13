@@ -172,9 +172,9 @@ class Midjourney
         ];
     }
 
-    public function getImagineFromMsg(string $prompt, array $msg): ?array
+    public function getImagineResFromMsgList(string $prompt, array $msgList): ?array
     {
-        $raw_message = self::firstWhere($msg, function ($item) use ($prompt) {
+        $raw_message = self::firstWhere($msgList, function ($item) use ($prompt) {
             $content = $item['content'] ?? null;
             if (empty($content)) return null;
 
@@ -270,7 +270,7 @@ class Midjourney
         return $attachments[0]['url'];
     }
 
-    public function getUpscaleFromMsg(string $prompt, array $msgList, int $index = 0)
+    public function getUpResFromMsgList(string $prompt, array $msgList, int $index = 0)
     {
         $message_index = $index + 1;
 
