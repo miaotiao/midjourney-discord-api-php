@@ -270,6 +270,26 @@ class Midjourney
         return $attachments[0]['url'];
     }
 
+    public function getUpscaleFromMsg(string $prompt, array $msgList, int $index = 0)
+    {
+        $message_index = $index + 1;
+
+        $message = self::firstWhere($msgList, 'content', "**$prompt** - Image #$message_index <@" . self::$user_id . '>');
+        if (is_null($message)) {
+            $message = self::firstWhere($msgList, 'content', "**$prompt** - Upscaled by <@" . self::$user_id . '> (fast)');
+        }
+        if (is_null($message)) {
+            $message = self::firstWhere($msgList, 'content', "**$prompt** - Upscaled by <@" . self::$user_id . '> (relax)');
+        }
+
+        if (is_null($message)) return null;
+
+        if (!($attachments = $message['attachments'] ?? null)) {
+            return null;
+        }
+        return $attachments[0]['url'];
+    }
+
     /**
      * @throws Exception
      */
