@@ -172,6 +172,28 @@ class Midjourney
         ];
     }
 
+    public function getImagineFromMsg(string $prompt, array $msg): ?array
+    {
+        $raw_message = self::firstWhere($msg, function ($item) use ($prompt) {
+            $content = $item['content'] ?? null;
+            if (empty($content)) return null;
+
+            return (
+                str_starts_with($content, "**$prompt** - <@" . self::$user_id . '>') and
+                !str_contains($content, '%') and
+                (str_ends_with($content, '(fast)') || str_ends_with($content, '(relax)'))
+            );
+        });
+
+        if (is_null($raw_message)) return null;
+
+        return [
+            'id' => $raw_message['id'],
+            'prompt' => $prompt,
+            'raw_message' => $raw_message
+        ];
+    }
+
     /**
      * get message list
      *
