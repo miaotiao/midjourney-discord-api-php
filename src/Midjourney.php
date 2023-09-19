@@ -57,6 +57,8 @@ class Midjourney
      */
     public function getGuildId(int $channelId)
     {
+        if (self::$guild_id) return self::$guild_id;
+
         return cache()->remember('dc_guild', 36000, function () use ($channelId) {
             $resp = self::$client->get('api/v9/channels/' . $channelId)->throw()->json();
             if (empty($resp['guild_id'])) {
@@ -72,6 +74,8 @@ class Midjourney
      */
     public function getUserId()
     {
+        if (self::$user_id) return self::$user_id;
+
         return cache()->remember('dc_user', 36000, function () {
             $resp = self::$client->get('api/v9/users/@me')->throw()->json();
             if (empty($resp['id'])) {
