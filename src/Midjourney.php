@@ -213,15 +213,11 @@ class Midjourney
      */
     public function upscale($message, int $upscale_index = 0): void
     {
-        if (!($raw_message = $message['raw_message'] ?? null)) {
-            throw new Exception('Upscale requires a message object obtained from the imagine/getImagine methods.');
-        }
-
         if ($upscale_index < 0 or $upscale_index > 3) {
             throw new Exception('Upscale index must be between 0 and 3.');
         }
 
-        if (!($components = $raw_message['components'] ?? null)) {
+        if (!($components = $message['components'] ?? null)) {
             throw new Exception('components is error');
         }
 
